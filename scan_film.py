@@ -1,16 +1,19 @@
-import sys, select, argparse
+import time
+import sys 
+import select
+import argparse
 
 import requests
 
 from adafruit_motorkit import MotorKit
 from adafruit_motor import stepper
 
-GRABBER_CIRCUIT = 1685  # 8.25 rotations of the stepper motor
+GRABBER_CIRCUIT = 1690  # Steps to turn per frame; 200 = one full rotation
 
 class Projector(object):
     def __init__(self):
         self.kit = MotorKit()
-        self.url = "http://192.168.0.187:8080/photo_save_only.jpg"
+        self.base_url = "http://192.168.0.187:8080"
 
     def scan_film(self, frames=None):
         scanned = 0
@@ -28,7 +31,9 @@ class Projector(object):
                 scanned += 1
             
     def scan_circuit(self, scanned_frames):
-        req = requests.post(self.url)
+        scan_url = "{}/photo_save_only.jpg".format(self.base_url)
+
+        req = requests.post(scan_url)
         if req.status_code != 200:
             raise Exception("Failed to save frame... error contacting server")
 
@@ -53,7 +58,6 @@ class Projector(object):
             while True:
                 break_if_interrupted()
                 self.kit.stepper1.onestep(direction=direction, style=stepper.INTERLEAVE)
-
 
 def main():
     projector = Projector()
