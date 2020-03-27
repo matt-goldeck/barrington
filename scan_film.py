@@ -8,13 +8,14 @@ import requests
 from adafruit_motorkit import MotorKit
 from adafruit_motor import stepper
 
-GRABBER_CIRCUIT = 1690  # Steps to turn per frame; 200 = one full rotation
+# 3200 == num of microsteps to complete one revolution
+GRABBER_CIRCUIT = 8000 # 2 1/2 revs
 
 class Projector(object):
     def __init__(self):
         self.kit = MotorKit()
-        self.base_url = "http://192.168.0.187:8080"
-
+        self.base_url = "http://192.168.0.189:8080/"
+        self.stepper_style = stepper.MICROSTEP
     def scan_film(self, frames=None):
         scanned = 0
         if frames:
@@ -42,7 +43,7 @@ class Projector(object):
         # Rotate motor 1 grabber circuit
         print("Moving to next frame...")
         for i in range(GRABBER_CIRCUIT):
-            self.kit.stepper1.onestep(direction=stepper.FORWARD, style=stepper.INTERLEAVE)
+            self.kit.stepper1.onestep(direction=stepper.FORWARD, style=self.stepper_style)
 
         self.kit.stepper1.release()
 
@@ -52,12 +53,20 @@ class Projector(object):
             while scanned < frames:
                 break_if_interrupted(scanned)
                 for i in range(GRABBER_CIRCUIT):
-                    self.kit.stepper1.onestep(direction=direction, style=stepper.INTERLEAVE)
+                    self.kit.stepper1.onestep(direction=direction, style=self.stepper_style)
                 scanned += 1
         else:
             while True:
                 break_if_interrupted()
-                self.kit.stepper1.onestep(direction=direction, style=stepper.INTERLEAVE)
+                self.kit.stepper1.onestep(direction=direction, style=self.stepper_style)
+
+def break_if_interrupted(frames=None):
+    i, o, e = select.select([sys.stdin], [], [], 0.0001)
+    if i == [sys.stdin]:
+        print("Breaking!")
+        if frames: 
+            print ("Processed {} frames".format(frames))
+        sys.exit()
 
 def main():
     projector = Projector()
@@ -80,14 +89,6 @@ def main():
     elif args.forward:
         print("Fast forwarding film {} frames....".format(frames or "infinite"))
         projector.infinite_move(frames=frames, direction=stepper.FORWARD)
-
-def break_if_interrupted(frames=None):
-    i, o, e = select.select([sys.stdin], [], [], 0.0001)
-    if i == [sys.stdin]:
-        print("Breaking!")
-        if frames: 
-            print ("Processed {} frames".format(frames))
-        sys.exit()
 
 main()
 
