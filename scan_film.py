@@ -8,14 +8,14 @@ import requests
 from adafruit_motorkit import MotorKit
 from adafruit_motor import stepper
 
-# 3200 == num of microsteps to complete one revolution
-GRABBER_CIRCUIT = 8000 # 2 1/2 revs
+# 400 == num of steps to complete one rev
+GRABBER_CIRCUIT = 1100  # 2 1/4 revolutions
 
 class Projector(object):
     def __init__(self):
         self.kit = MotorKit()
-        self.base_url = "http://192.168.0.189:8080/"
-        self.stepper_style = stepper.MICROSTEP
+        self.base_url = "http://192.168.0.187:8080/"
+        self.stepper_style = stepper.INTERLEAVE
     def scan_film(self, frames=None):
         scanned = 0
         if frames:
@@ -43,7 +43,7 @@ class Projector(object):
         # Rotate motor 1 grabber circuit
         print("Moving to next frame...")
         for i in range(GRABBER_CIRCUIT):
-            self.kit.stepper1.onestep(direction=stepper.FORWARD, style=self.stepper_style)
+            self.kit.stepper1.onestep(direction=stepper.BACKWARD, style=self.stepper_style)
 
         self.kit.stepper1.release()
 
@@ -85,7 +85,7 @@ def main():
         projector.scan_film(frames=frames)
     elif args.rewind:
         print("Rewinding film {} frames....".format(frames or "infinite"))
-        projector.infinite_move(frames=frames, direction=stepper.REVERSE)
+        projector.infinite_move(frames=frames, direction=stepper.BACKWARD)
     elif args.forward:
         print("Fast forwarding film {} frames....".format(frames or "infinite"))
         projector.infinite_move(frames=frames, direction=stepper.FORWARD)
