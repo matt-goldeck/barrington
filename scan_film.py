@@ -58,8 +58,8 @@ def main():
     parser.add_argument("-s", "--scan", action='store_true', help="Scans film until interrupted")
     parser.add_argument("-r", "--rewind", action='store_true', help="Rewinds film until interrupted")
     parser.add_argument("-f", "--frames", help="The number of frames to move")
-    parser.add_argument("-p", "--plus", help="How many steps to add per revolution")
-    parser.add_argument("-s", "--subtract", help="How many steps to subtract per revolution")
+    parser.add_argument("-add", "--add", help="How many steps to add per revolution")
+    parser.add_argument("-sub", "--subtract", help="How many steps to subtract per revolution")
 
     args = parser.parse_args()
 
@@ -67,8 +67,8 @@ def main():
 
     # Tinker with number of steps if specified
     steps = GRABBER_CIRCUIT
-    if args.plus:
-        steps += int(args.plus)
+    if args.add:
+        steps += int(args.add)
     elif args.subtract:
         steps -= int(args.subtract)
 
