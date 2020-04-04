@@ -19,7 +19,7 @@ class Projector(object):
         self.scan_url = "{}/photo_save_only.jpg".format(self.base_url)
         self.stepper_style = stepper.INTERLEAVE
 
-    def scan_film(self, frames=None, steps=GRABBER_CIRCUIT):
+    def scan_film(self, direction, steps=GRABBER_CIRCUIT, scan=False, frames=None):
         scanned = 0
 
         while not frames or scanned < frames:
@@ -55,7 +55,7 @@ def main():
     projector = Projector()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--scan", action='store_true', help="Scans film until interrupted")
+    parser.add_argument("-scan", "--scan", action='store_true', help="Scans film until interrupted")
     parser.add_argument("-r", "--rewind", action='store_true', help="Rewinds film until interrupted")
     parser.add_argument("-f", "--frames", help="The number of frames to move")
     parser.add_argument("-p", "--plus", help="How many steps to add per revolution")
@@ -72,14 +72,15 @@ def main():
     elif args.subtract:
         steps -= int(args.subtract)
 
-    # Default to going 'forward' through the film unless specified
     scan = args.scan
+
+    # Default to going 'forward' through the film unless specified
     direction = stepper.BACKWARD
     if args.rewind:
         direction = stepper.FORWARD
 
     print("Beginning film scanning routine for {} frames....".format(frames or "infinite"))
-    projector.move_circuit(direction, steps, scan)
+    projector.scan_film(direction, steps, scan, frames)
 
 
 main()
