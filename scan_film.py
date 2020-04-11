@@ -17,7 +17,7 @@ class Projector(object):
         self.kit = MotorKit()
         self.base_url = "http://192.168.0.187:8080/"
         self.scan_url = "{}/photo_save_only.jpg".format(self.base_url)
-        self.stepper_style = stepper.INTERLEAVE
+        self.stepper_style = stepper.DOUBLE
  
         self.breakbeam = digitalio.DigitalInOut(board.D21)
         self.breakbeam.direction = digitalio.Direction.INPUT
@@ -32,7 +32,7 @@ class Projector(object):
             self.move_circuit(direction, scan)
             scanned += 1
 
-    def move_circuit(self, direction, steps, scan=False):
+    def move_circuit(self, direction, scan):
         scan_url = "{}/photo_save_only.jpg".format(self.base_url)
 
         # Move until beam is blocked
@@ -54,8 +54,15 @@ class Projector(object):
             self.kit.stepper1.onestep(direction=direction, style=self.stepper_style)
 
     def move_until_condition(self, condition, direction):
+        count = 0
         while self.breakbeam.value is not condition:
+            count += 1
             self.kit.stepper1.onestep(direction=direction, style=self.stepper_style)
+
+            # Shut down in case something goes horribly wrong
+            if count >= 10000:
+                raise Exception("Nothing detected in 10000 steps... Shutting down!")
+
 
 def break_if_interrupted(frames=None):
     i, o, e = select.select([sys.stdin], [], [], 0.0001)
