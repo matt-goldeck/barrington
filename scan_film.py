@@ -13,12 +13,13 @@ from adafruit_motor import stepper
 
 
 class Projector(object):
-    def __init__(self):
+    def __init__(self, auto_mode=False):
         self.kit = MotorKit()
         self.base_url = "http://192.168.0.187:8080/"
         self.scan_url = "{}/photo_save_only.jpg".format(self.base_url)
         self.stepper_style = stepper.DOUBLE
- 
+
+        self.auto_mode = auto_mode
         self.breakbeam = digitalio.DigitalInOut(board.D21)
         self.breakbeam.direction = digitalio.Direction.INPUT
         self.breakbeam.pull = digitalio.Pull.UP
@@ -27,7 +28,8 @@ class Projector(object):
         scanned = 0
 
         while not frames or scanned < frames:
-            break_if_interrupted(scanned)
+            if not self.auto_mode:
+                break_if_interrupted(scanned)
             print("Processing frame #{}".format(scanned))
             self.move_circuit(direction, scan)
             scanned += 1
@@ -74,18 +76,18 @@ def break_if_interrupted(frames=None):
 
 
 def main():
-    projector = Projector()
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-scan", "--scan", action='store_true', help="Scans film until interrupted")
     parser.add_argument("-r", "--rewind", action='store_true', help="Rewinds film until interrupted")
     parser.add_argument("-f", "--frames", help="The number of frames to move")
-
+    parser.add_argument("-a", "--auto", action='store_true', help="Whether or not this script is being run automatically")
     args = parser.parse_args()
 
     frames = int(args.frames) if args.frames else None
 
     scan = args.scan
+    auto = args.auto
+    projector = Projector(auto)
 
     # Default to going 'forward' through the film unless specified
     direction = stepper.BACKWARD
