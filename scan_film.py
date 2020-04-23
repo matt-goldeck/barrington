@@ -34,6 +34,9 @@ class Projector(object):
             self.move_circuit(direction, scan)
             scanned += 1
 
+            if scanned % 5 == 0:
+                self.adjust_takeup(direction)
+
     def move_circuit(self, direction, scan):
         scan_url = "{}/photo_save_only.jpg".format(self.base_url)
 
@@ -65,6 +68,10 @@ class Projector(object):
             if count >= 10000:
                 raise Exception("Nothing detected in 10000 steps... Shutting down!")
 
+    def adjust_takeup(self, direction):
+        # Adjust the takeup spool to pull film taught or loosen
+        for i in range(200):
+            self.kit.stepper2.onestep(direction=direction, style=stepper.MICROSTEP)
 
 def break_if_interrupted(frames=None):
     i, o, e = select.select([sys.stdin], [], [], 0.0001)
