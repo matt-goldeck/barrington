@@ -41,7 +41,7 @@ class Projector(object):
             if scanned % 3 == 0:
                 self.adjust_takeup(direction)
             if scanned % 24 == 0:
-                self.rebase()
+                self.rebase(direction)
 
     def move_circuit(self, direction, scan):
         scan_url = "{}/photo_save_only.jpg".format(self.base_url)
@@ -77,20 +77,21 @@ class Projector(object):
         for i in range(200):
             self.kit.stepper2.onestep(direction=direction, style=stepper.MICROSTEP)
 
-    def rebase(self):
+    def rebase(self, direction):
         """Ensure advancement arm is rooted in a sprocket hole by moving backwards and repeating a half circuit"""
+        reverse_direction = REWIND if direction == FORWARD else FORWARD
 
         # Move until first prong blocks beam
         if self.breakbeam.value:
-            self.move_until_condition(False, REWIND)
-        # Move until free
+            self.move_until_condition(False, reverse_direction)
+        # Move until prong is clear
         if not self.breakbeam.value:
-            self.move_until_condition(True, REWIND)
+            self.move_until_condition(True, reverse_direction)
         # Move until second prong blocks beam
         if self.breakbeam.value:
-            self.move_until_condition(False, REWIND)
+            self.move_until_condition(False, reverse_direction)
 
-        # Move until no longer blocked then edge a little further
+        # Move forward until no longer blocked then edge a little further
         self.move_until_condition(True, direction)
         for i in range(400):
             self.kit.stepper1.onestep(direction=direction, style=self.stepper_style)
