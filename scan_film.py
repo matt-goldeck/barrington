@@ -13,13 +13,18 @@ from adafruit_motor import stepper
 
 
 class Projector(object):
-    def __init__(self, auto_mode=False):
+    FORWARD = stepper.REVERSE
+    REWIND = stepper.FORWARD
+
+    def __init__(self, auto_mode=False, debug=False):
         self.kit = MotorKit()
         self.base_url = "http://192.168.0.187:8080/"
         self.scan_url = "{}/photo_save_only.jpg".format(self.base_url)
         self.stepper_style = stepper.DOUBLE
 
         self.auto_mode = auto_mode
+        self.debug = debug
+
         self.breakbeam = digitalio.DigitalInOut(board.D21)
         self.breakbeam.direction = digitalio.Direction.INPUT
         self.breakbeam.pull = digitalio.Pull.UP
@@ -36,6 +41,8 @@ class Projector(object):
 
             if scanned % 3 == 0:
                 self.adjust_takeup(direction)
+            if scanned % 24 == 0:
+                self.rebase()
 
     def move_circuit(self, direction, scan):
         scan_url = "{}/photo_save_only.jpg".format(self.base_url)
@@ -47,7 +54,7 @@ class Projector(object):
         if scan:
             self.take_picture()
             print ("Succesfully scanned frame!")
-        else:
+        elif self.debug:
             print("CLICK!")  # debug output to verify accuracy of circuit
             time.sleep(.5)
 
@@ -67,16 +74,21 @@ class Projector(object):
                 raise Exception("Nothing detected in 10000 steps... Shutting down!")
 
     def adjust_takeup(self, direction):
-        # Adjust the takeup spool to pull film taught or loosen
+        """Adjust the takeup spool to pull film taught or loosen"""
         for i in range(200):
             self.kit.stepper2.onestep(direction=direction, style=stepper.MICROSTEP)
 
+    def rebase(self):
+        """Ensure advancement arm is rooted in a sprocket hole by moving backwards and repeating a half circuit"""
+        if self.breakbeam.value:
+            self.move_until_condition(False, REWIND)
+
     def initialize_camera(self):
         # Perform necessary settings adjustments
-        req = requests.post("{}/ptz?zoom=100".format(self.base_url)) # Adjust zoom
+        req = requests.post("{}/ptz?zoom=100".format(self.base_url))  # Adjust zoom
         if req.status_code != 200:
             raise Exception("Failed to initialize zoom.... error contacting server")
-        req = requests.post("{}/settings/focusmode?set=off".format(self.base_url)) # Adjust focus
+        req = requests.post("{}/settings/focusmode?set=off".format(self.base_url))  # Adjust focus
         if req.status_code != 200:
             raise Exception("Failed to initialize focus... error contacting server")
 
@@ -97,6 +109,7 @@ class Projector(object):
 
         raise Exception("Failed to contact camera server... Aborting!")
 
+
 def break_if_interrupted(frames=None):
     i, o, e = select.select([sys.stdin], [], [], 0.0001)
     if i == [sys.stdin]:
@@ -112,18 +125,20 @@ def main():
     parser.add_argument("-r", "--rewind", action='store_true', help="Rewinds film until interrupted")
     parser.add_argument("-f", "--frames", help="The number of frames to move")
     parser.add_argument("-a", "--auto", action='store_true', help="Whether or not this script is being run automatically")
+    parser.add_argument('-d', "--debug", action='store_true', help="Whether or not to display debug output or not")
     args = parser.parse_args()
 
     frames = int(args.frames) if args.frames else None
 
     scan = args.scan
     auto = args.auto
-    projector = Projector(auto)
+    debug = args.debug
+    projector = Projector(auto, debug)
 
     # Default to going 'forward' through the film unless specified
-    direction = stepper.BACKWARD
+    direction = FORWARD
     if args.rewind:
-        direction = stepper.FORWARD
+        direction = REWIND
 
     print("Beginning film scanning routine for {} frames....".format(frames or "infinite"))
     projector.scan_film(direction, scan, frames)
