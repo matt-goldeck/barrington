@@ -13,6 +13,8 @@ from adafruit_motor import stepper
 
 FORWARD = stepper.BACKWARD
 REWIND = stepper.FORWARD
+
+
 class Projector(object):
     def __init__(self, debug=False):
         self.kit = MotorKit()
@@ -77,8 +79,21 @@ class Projector(object):
 
     def rebase(self):
         """Ensure advancement arm is rooted in a sprocket hole by moving backwards and repeating a half circuit"""
+
+        # Move until first prong blocks beam
         if self.breakbeam.value:
             self.move_until_condition(False, REWIND)
+        # Move until free
+        if not self.breakbeam.value:
+            self.move_until_condition(True, REWIND)
+        # Move until second prong blocks beam
+        if self.breakbeam.value:
+            self.move_until_condition(False, REWIND)
+
+        # Move until no longer blocked then edge a little further
+        self.move_until_condition(True, direction)
+        for i in range(400):
+            self.kit.stepper1.onestep(direction=direction, style=self.stepper_style)
 
     def initialize_camera(self):
         # Perform necessary settings adjustments
