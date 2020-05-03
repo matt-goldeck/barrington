@@ -34,7 +34,7 @@ class Projector(object):
             self.move_circuit(direction, scan)
             scanned += 1
 
-            if scanned % 5 == 0:
+            if scanned % 3 == 0:
                 self.adjust_takeup(direction)
 
     def move_circuit(self, direction, scan):
@@ -45,13 +45,11 @@ class Projector(object):
             self.move_until_condition(False, direction)
 
         if scan:
-            req = requests.post(self.scan_url)
-            if req.status_code != 200:
-                raise Exception("Failed to save frame... error contacting server")
+            self.take_picture()
             print ("Succesfully scanned frame!")
         else:
-            print("CLICK!")
-            time.sleep(1)
+            print("CLICK!")  # debug output to verify accuracy of circuit
+            time.sleep(.5)
 
         # Move until no longer blocked then edge a little further
         self.move_until_condition(True, direction)
@@ -72,6 +70,32 @@ class Projector(object):
         # Adjust the takeup spool to pull film taught or loosen
         for i in range(200):
             self.kit.stepper2.onestep(direction=direction, style=stepper.MICROSTEP)
+
+    def initialize_camera(self):
+        # Perform necessary settings adjustments
+        req = requests.post("{}/ptz?zoom=100".format(self.base_url)) # Adjust zoom
+        if req.status_code != 200:
+            raise Exception("Failed to initialize zoom.... error contacting server")
+        req = requests.post("{}/settings/focusmode?set=off".format(self.base_url)) # Adjust focus
+        if req.status_code != 200:
+            raise Exception("Failed to initialize focus... error contacting server")
+
+    def take_picture(self):
+        scan_url = "{}/photo_save_only.jpg".format(self.base_url)
+
+        attempts = 0
+        while attempts < 3:
+            try:
+                req = requests.post(scan_url, timeout=2)
+                return
+            except requests.exceptions.Timeout as e:
+                print("Timed out... attempting to take photo again.")
+                time.sleep(.5)
+
+                attempts += 1
+                self.initialize_camera()  # Need to reinitialize in event of timeout
+
+        raise Exception("Failed to contact camera server... Aborting!")
 
 def break_if_interrupted(frames=None):
     i, o, e = select.select([sys.stdin], [], [], 0.0001)
