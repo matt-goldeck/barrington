@@ -13,7 +13,7 @@ from adafruit_motor import stepper
 
 
 class Projector(object):
-    FORWARD = stepper.REVERSE
+    FORWARD = stepper.BACKWARD
     REWIND = stepper.FORWARD
 
     def __init__(self, debug=False):
