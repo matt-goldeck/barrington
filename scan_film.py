@@ -11,11 +11,9 @@ import digitalio
 from adafruit_motorkit import MotorKit
 from adafruit_motor import stepper
 
-
+FORWARD = stepper.BACKWARD
+REWIND = stepper.FORWARD
 class Projector(object):
-    FORWARD = stepper.BACKWARD
-    REWIND = stepper.FORWARD
-
     def __init__(self, debug=False):
         self.kit = MotorKit()
         self.base_url = "http://192.168.0.187:8080/"
