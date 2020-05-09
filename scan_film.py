@@ -1,5 +1,5 @@
 import time
-import sys 
+import sys
 import select
 import argparse
 import time
@@ -43,6 +43,8 @@ class Projector(object):
             if scanned % 24 == 0:
                 self.rebase(direction)
 
+        self.release()
+
     def move_circuit(self, direction, scan):
         scan_url = "{}/photo_save_only.jpg".format(self.base_url)
 
@@ -64,13 +66,23 @@ class Projector(object):
 
     def move_until_condition(self, condition, direction):
         count = 0
+        retries = 0
         while self.breakbeam.value is not condition:
             count += 1
             self.kit.stepper1.onestep(direction=direction, style=self.stepper_style)
 
             # Shut down in case something goes horribly wrong
             if count >= 10000:
-                raise Exception("Nothing detected in 10000 steps... Shutting down!")
+                self.release() # Release motor to cool down
+
+                # Terminate if retry count exceeded, otherwise wait and try again
+                if retries >= 2:
+                    raise Exception("No motion detected after 3 circuit attempts! Terminating...")
+
+                print("No motion detected in 10,000 steps... Sleeping and retrying...")
+                time.sleep(30)
+                count = 0
+                retries += 1
 
     def adjust_takeup(self, direction):
         """Adjust the takeup spool to pull film taught or loosen"""
@@ -122,11 +134,16 @@ class Projector(object):
 
         raise Exception("Failed to contact camera server... Aborting!")
 
+    def release(self):
+        self.kit.stepper1.release()
+        self.kit.stepper2.release()
 
 def break_if_interrupted(frames=None):
     i, o, e = select.select([sys.stdin], [], [], 0.0001)
     if i == [sys.stdin]:
         print("Breaking!")
+        self.release()
+
         if frames:
             print ("Processed {} frames".format(frames))
         sys.exit()
